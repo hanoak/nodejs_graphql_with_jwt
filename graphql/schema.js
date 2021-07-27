@@ -9,8 +9,18 @@ module.exports = buildSchema(`
         price: String!
     }
 
+    type postData {
+        name: String!
+        author: String!
+        price: String!
+    }
+
     type BookData {
         books: [Book!]!
+    }
+
+    type returnString {
+        message: String!
     }
 
     type RootQuery {
@@ -19,7 +29,13 @@ module.exports = buildSchema(`
         getSingle(id: ID!): Book! 
     }
 
+    type RootMutation {
+        createBook(userInput: postData):  returnString!
+        updateBook(id: ID!, userInput: postData): returnString!
+    }
+
     schema {
         query: RootQuery
+        mutation: RootMutation
     }
 `);

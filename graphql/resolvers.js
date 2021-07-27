@@ -117,5 +117,106 @@ module.exports = {
             }
             throw err;
         });
+    },
+    createBook: function({ userInput }, req) {
+        if(! req.isAuth) {
+            const error = new Error('Not authenticated.');
+            error.code = 402;
+            throw error;
+        }
+
+        const errors;
+        const returnString;
+        if(! (validator.isString(userInput.name) || validator.isLength(userInput.name, { min: 4})) ) {
+            errors.push({message: "Invalid book's name"});
+        }
+        if(! (validator.isString(userInput.author) || validator.isLength(userInput.author, { min: 4})) ) {
+            errors.push({message: "Invalid author's name"});
+        }
+        if(! validator.isNumeric(userInput.price) ) {
+            errors.push({message: "Invalid price"});
+        }
+
+        if (errors.length > 0) {
+            const error = new Error('Invalid input');
+            error.data = errors;
+            error.code = 422;
+            throw error;
+        }
+
+        const book = new Book({
+            name: userInput.name,
+            author: userInput.author,
+            price: userInput.price
+        });
+    
+        book.save()
+            .then(result => {
+                returnString = { message: 'Book successfully created!'};
+            })
+            .catch(err => {
+                if(! err.code) {
+                    err.code = 500;
+                }
+                throw err;
+            });
+
+            return returnString;
+
+    },
+    updateBook: function({ id, userInput }, req)  {
+        if(! req.isAuth) {
+            const error = new Error('Not authenticated.');
+            error.code = 402;
+            throw error;
+        }
+
+        const errors;
+        const returnString;
+        if(! (validator.isString(userInput.name) || validator.isLength(userInput.name, { min: 4})) ) {
+            errors.push({message: "Invalid book's name"});
+        }
+        if(! (validator.isString(userInput.author) || validator.isLength(userInput.author, { min: 4})) ) {
+            errors.push({message: "Invalid author's name"});
+        }
+        if(! validator.isNumeric(userInput.price) ) {
+            errors.push({message: "Invalid price"});
+        }
+
+        if (errors.length > 0) {
+            const error = new Error('Invalid input');
+            error.data = errors;
+            error.code = 422;
+            throw error;
+        }
+
+        Book.findById(id)
+        .then(book => {
+
+            if(! book) {
+                const error = new Error('Could not find book.');
+                error.statusCode = 404;
+                next(error);
+            }
+
+            book.name = req.body.name;
+            book.author = req.body.author;
+            book.price = req.body.price;
+
+            return book.save();
+
+        })
+        .then(result => {
+            returnString = { message: 'Book updated!', book: result };
+        })
+        .catch(err => {
+            if(! err.code) {
+                    err.code = 500;
+                }
+            throw err;
+        });
+
+        return returnString;
+
     }
 }
