@@ -61,5 +61,61 @@ module.exports = {
                 throw err;
             });
 
+    },
+    get: function(args, req) {
+        if(! req.isAuth) {
+            const error = new Error('Not authenticated.');
+            error.code = 402;
+            throw error;
+        }
+
+        Book.find()
+        .then(books => {
+
+            if (!books) {
+                const error = new Error('No books found!');
+                error.code = 404;
+                throw error;
+            }
+            
+            return {
+                books: books.map( book => {
+                    return { ...book._doc, _id: book._id.toString() };
+                })
+            }
+
+        })
+        .catch(err => {
+            if(! err.code) {
+                err.code = 500;
+            }
+            throw err;
+        });
+    },
+    getSingle: function({ id }, req) {
+        if(! req.isAuth) {
+            const error = new Error('Not authenticated.');
+            error.code = 402;
+            throw error;
+        }
+
+        Book.findById(id)
+        .then(book => {
+
+            if (!book) {
+                const error = new Error('No books found!');
+                error.code = 404;
+                throw error;
+            }
+
+            return { ...book._doc, _id: book._id.toString() };
+
+        })
+        .catch(err => {
+            if(! err.code) {
+                err.code = 500;
+            }
+            throw err;
+        });
     }
 }
