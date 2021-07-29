@@ -32,6 +32,8 @@ module.exports = buildSchema(`
     type RootMutation {
         createBook(userInput: postData):  returnString!
         updateBook(id: ID!, userInput: postData): returnString!
+        deleteBook(id: ID!): returnString!
+        
     }
 
     schema {
