@@ -6,13 +6,13 @@ module.exports = buildSchema(`
         _id: ID!
         name: String!
         author: String!
-        price: String!
+        price: Int!
     }
 
-    type postData {
+    input postData {
         name: String!
         author: String!
-        price: String!
+        price: Int!
     }
 
     type BookData {
@@ -22,10 +22,13 @@ module.exports = buildSchema(`
     type returnString {
         message: String!
     }
+    type tokenType {
+        token: String!
+    }
 
     type RootQuery {
-        auth(email: String!, password: String!): {token: String}!
-        get(): BookData!
+        auth(email: String!, password: String!): tokenType!
+        get: BookData!
         getSingle(id: ID!): Book! 
     }
 

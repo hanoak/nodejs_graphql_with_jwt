@@ -1,13 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const graphqlHttp = require('express-graphql');
+const graphqlHttp = require('express-graphql').graphqlHTTP;
 
 const graphqlSchema = require('./graphql/schema');
 const graphqlresolvers = require('./graphql/resolvers');
 const isAuth = require('./middleware/is-auth');
 
 const app = express();
-const MONGODBURL = "<your mongodb cluster url goes here>";
+const MONGODBURL = "<Your MongoDB URL goes here>";
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -30,11 +30,9 @@ app.use('/graphql', graphqlHttp({
     rootValue: graphqlresolvers,
     graphiql: true,
     formatError(error) {
-
         if(! error.originalError) {
             return error;
         }
-
         return {
             message: error.message || 'An error occurred.',
             status: error.originalError.code || 500,
@@ -45,7 +43,6 @@ app.use('/graphql', graphqlHttp({
 
 app.use((error, req, res, next) => {
 
-    console.log(error);
     res.status(error.statusCode || 500).json({
         message: error.message,
         data: error.data

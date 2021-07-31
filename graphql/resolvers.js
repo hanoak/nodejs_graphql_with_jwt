@@ -7,9 +7,9 @@ const Book = require('../models/book');
 
 module.exports = {
     
-    auth: function({ email, password }) {
+    auth: async function({ email, password }) {
         
-        const errors;
+        let errors = [];
         if(! validator.isEmail(email)) {
             errors.push({message: "Invalid Email"});
         }
@@ -24,116 +24,87 @@ module.exports = {
             throw error;
         }
 
-        let dbuser;
-        User.findOne({email: email})
-            .then(user => {
+        const user = await User.findOne({email: email});
 
-                if(! user) {
-                    const err = new Error('Email not found!');
-                    err.code = 401;
-                    err.data = {email: email, password: password};
-                    throw err;
-                }
-                dbuser = user;
-                return bcrypt.compare(password, user.password);
-            })
-            .then(isEqual => {
-
-                if(! isEqual) {
-                    const err = new Error('Wrong password!');
-                    err.code = 401;
-                    err.data = {email: email, password: password};
-                    throw err;
-                }
-
-                const token = jwt.sign({
-                    uid: dbuser._id.toString(),                
-                }, 'YourSecretKeyGoesHere123', {
-                    expiresIn: '1h'
-                });
-
-                return {token: token};
-            })
-            .catch(err => {
-                if(! err.code) {
-                    err.code = 500;
-                }
-                throw err;
-            });
-
-    },
-    get: function(args, req) {
-        if(! req.isAuth) {
-            const error = new Error('Not authenticated.');
-            error.code = 402;
-            throw error;
-        }
-
-        Book.find()
-        .then(books => {
-
-            if (!books) {
-                const error = new Error('No books found!');
-                error.code = 404;
-                throw error;
-            }
-            
-            return {
-                books: books.map( book => {
-                    return { ...book._doc, _id: book._id.toString() };
-                })
-            }
-
-        })
-        .catch(err => {
-            if(! err.code) {
-                err.code = 500;
-            }
+        if(! user) {
+            const err = new Error('Email not found!');
+            err.code = 401;
+            err.data = {email: email, password: password};
             throw err;
-        });
-    },
-    getSingle: function({ id }, req) {
-        if(! req.isAuth) {
-            const error = new Error('Not authenticated.');
-            error.code = 402;
-            throw error;
         }
 
-        Book.findById(id)
-        .then(book => {
-
-            if (!book) {
-                const error = new Error('No books found!');
-                error.code = 404;
-                throw error;
-            }
-
-            return { ...book._doc, _id: book._id.toString() };
-
-        })
-        .catch(err => {
-            if(! err.code) {
-                err.code = 500;
-            }
+        const isEqual = await bcrypt.compare(password, user.password);
+        if(! isEqual) {
+            const err = new Error('Wrong password!');
+            err.code = 401;
+            err.data = {email: email, password: password};
             throw err;
-        });
+        }
+
+        const token = jwt.sign({uid: user._id.toString()}, 'YourSecretKeyGoesHere123', { expiresIn: '1h' });
+        return {token: token};
+
     },
-    createBook: function({ userInput }, req) {
+    get: async function(args, req) {
         if(! req.isAuth) {
             const error = new Error('Not authenticated.');
             error.code = 402;
             throw error;
         }
 
-        const errors;
-        const returnString;
-        if(! (validator.isString(userInput.name) || validator.isLength(userInput.name, { min: 4})) ) {
+        const books = await Book.find();
+        
+        if (!books) {
+            const error = new Error('No books found!');
+            error.code = 404;
+            throw error;
+        }
+
+        return {
+            books: books.map( book => {
+                return { ...book._doc, _id: book._id.toString() };
+            })
+        }
+    },
+    getSingle: async function({ id }, req) {
+        if(! req.isAuth) {
+            const error = new Error('Not authenticated.');
+            error.code = 402;
+            throw error;
+        }
+
+        if (! validator.isMongoId(id.toString())) {
+            const error = new Error('Invalid ID');
+            error.code = 402;
+            throw error;
+        }
+
+        const book = await Book.findById(id);
+        
+        if (!book) {
+            const error = new Error('No book found!');
+            error.code = 404;
+            throw error;
+        }
+
+        return { ...book._doc, _id: book._id.toString() };
+
+    },
+    createBook: async function({ userInput }, req) {
+        if(! req.isAuth) {
+            const error = new Error('Not authenticated.');
+            error.code = 402;
+            throw error;
+        }
+
+        let errors = [];
+        if(! validator.isLength(userInput.name, { min: 4}) ) {
             errors.push({message: "Invalid book's name"});
         }
-        if(! (validator.isString(userInput.author) || validator.isLength(userInput.author, { min: 4})) ) {
+        if(! validator.isLength(userInput.author, { min: 4})) {
             errors.push({message: "Invalid author's name"});
         }
-        if(! validator.isNumeric(userInput.price) ) {
+        if(! validator.isNumeric(userInput.price.toString()) ) {
             errors.push({message: "Invalid price"});
         }
 
@@ -150,36 +121,26 @@ module.exports = {
             price: userInput.price
         });
     
-        book.save()
-            .then(result => {
-                returnString = { message: 'Book successfully created!'};
-            })
-            .catch(err => {
-                if(! err.code) {
-                    err.code = 500;
-                }
-                throw err;
-            });
-
-            return returnString;
+        await book.save();
+        return { message: 'Book successfully created!'};
 
     },
-    updateBook: function({ id, userInput }, req)  {
+    updateBook: async function({ id, userInput }, req)  {
         if(! req.isAuth) {
             const error = new Error('Not authenticated.');
             error.code = 402;
             throw error;
         }
 
-        const errors;
-        const returnString;
-        if(! (validator.isString(userInput.name) || validator.isLength(userInput.name, { min: 4})) ) {
+        let errors = [];
+        
+        if(! validator.isLength(userInput.name, { min: 4})) {
             errors.push({message: "Invalid book's name"});
         }
-        if(! (validator.isString(userInput.author) || validator.isLength(userInput.author, { min: 4})) ) {
+        if(! validator.isLength(userInput.author, { min: 4})) {
             errors.push({message: "Invalid author's name"});
         }
-        if(! validator.isNumeric(userInput.price) ) {
+        if(! validator.isNumeric(userInput.price.toString()) ) {
             errors.push({message: "Invalid price"});
         }
 
@@ -190,64 +151,50 @@ module.exports = {
             throw error;
         }
 
-        Book.findById(id)
-        .then(book => {
+        if (! validator.isMongoId(id.toString())) {
+            const error = new Error('Invalid ID');
+            error.code = 402;
+            throw error;
+        }
 
-            if(! book) {
-                const error = new Error('Could not find book.');
-                error.statusCode = 404;
-                next(error);
-            }
+        const book = await Book.findById(id);
 
-            book.name = req.body.name;
-            book.author = req.body.author;
-            book.price = req.body.price;
+        if(! book) {
+            const error = new Error('Could not find book.');
+            error.code = 404;
+            throw error;
+        }
 
-            return book.save();
+        book.name = userInput.name;
+        book.author = userInput.author;
+        book.price = userInput.price;
 
-        })
-        .then(result => {
-            returnString = { message: 'Book updated!', book: result };
-        })
-        .catch(err => {
-            if(! err.code) {
-                    err.code = 500;
-                }
-            throw err;
-        });
-
-        return returnString;
+        const result = await book.save();
+        return { message: 'Book updated!', book: result };
 
     },
-    deleteBook: function({ id }, req)  {
+    deleteBook: async function({ id }, req)  {
         if(! req.isAuth) {
             const error = new Error('Not authenticated.');
             error.code = 402;
             throw error;
         }
 
-        const returnString;
-        Book.findById(id)
-        .then(book => {
+        if (! validator.isMongoId(id.toString())) {
+            const error = new Error('Invalid ID');
+            error.code = 402;
+            throw error;
+        }
+        
+        const book = await Book.findById(id);
 
-            if(! book) {
-                const error = new Error('Could not find book.');
-                error.statusCode = 404;
-                next(error);
-            }
+        if(! book) {
+            const error = new Error('Could not find book.');
+            error.code = 404;
+            throw error;
+        }
 
-            return Book.findByIdAndRemove(id);
-        })
-        .then(result => {
-            returnString = { message: 'Book deleted.' };
-        })
-        .catch(err => {
-            if(! err.statusCode) {
-                err.statusCode = 500;
-                next(err);
-            }
-        });
-
-        return returnString;
+        await Book.findByIdAndRemove(id);
+        return { message: 'Book deleted.'};
     }
 }
