@@ -53,7 +53,8 @@ DELETE (Mutation)
 1. Well, first clone or download this repo.
 2. Create a cluster in mongodb Atlas, and then create a collection, and get your access URL to your cluster's database and paste it in ***app.js*** for ***MONGODBURL*** variable.
 3. Run "npm install" to install dependent packages for the app.
-4. Now, you're ready to go!
+4. Create a document with email and password(bcrypt hashed) in user collection for you to authenticate yourselves.
+5. Now, you're ready to go!
 
 
 
